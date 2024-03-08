@@ -1,0 +1,8 @@
+{
+  "name": "Livrari",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite",
+  "id": "1593cb26"
+}
