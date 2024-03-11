@@ -1,13 +1,15 @@
 import { create } from "zustand";
 interface ProductState {
   open: boolean;
-  display: () => void;
+  product?: any;
+  display: (product: any) => void;
   hide: () => void;
   onSwitch: () => void;
 }
 export const useProduct = create<ProductState>((set, get) => ({
   open: false,
-  display: () => set({ open: true }),
+  product: undefined,
+  display: (product) => set({ open: true, product }),
   hide: () => set({ open: false }),
   onSwitch: () => {
     set({ open: false });

@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import React from "react";
 import { useCategory } from "@/state/category";
+import { useProducts } from "@/state/products";
 
 const CART_FILL = () => {
     return (<>
@@ -69,12 +70,13 @@ const Search = () => {
         </div>
     </>)
 }
-const ProductCart = ({ items }: { items?: number }) => {
-    const { open, display, hide } = useCart()
-    const hasItems = React.useMemo(() => items && items > 0, [items])
+const ProductCart = ({ product }: { product: any }) => {
+    const { open, display, hide, getQuantity } = useCart()
+    const items = getQuantity(product._id)
+    const hasItems = React.useMemo(() => items > 0, [items])
     return (<>
         <div className="relative">
-            <Button size="icon" variant="default" className="h-10 w-10" onClick={display}>
+            <Button size="icon" variant="default" className="h-10 w-10" onClick={() => display(product)}>
                 {hasItems ? <CART_FILL /> : <CART_EMPTY />}
             </Button>
             {hasItems && <Badge variant="default" className="rounded-full absolute top-[-10px] right-[-10px]">
@@ -83,49 +85,58 @@ const ProductCart = ({ items }: { items?: number }) => {
         </div>
     </>)
 }
-const ProductTitle = ({ index }: { index: number }) => {
+const ProductTitle = ({ product }: { product: any }) => {
     return (<>
         <div className="flex items-center justify-center flex-col ml-2 ">
-            <span className="text-lg font-semibold text-start w-full">Product</span>
-            <span className="text-sm text-start w-full">{index} lei</span>
+            <span className="text-lg font-semibold text-start w-full">{product?.name}</span>
+            <span className="text-sm text-start w-full">{product?.price} lei</span>
         </div>
     </>)
 }
-const Product = ({ index }: { index: number }) => {
+const Product = ({ product }: { product: any }) => {
     const { display } = useProduct()
     return (<>
         <div className="p-1" >
             <Card className="flex items-center justify-between p-2 w-full h-full">
-                <div className="flex items-center justify-center flex-row" onClick={display}>
+                <div className="flex items-center justify-center flex-row" onClick={() => display(product)}>
                     <div className="flex h-20 w-20 rounded-md overflow-hidden">
-                        <img src={`https://picsum.photos/150/150?random=${Date.now() + index}`} alt="product" />
+                        <img src={product.image} alt={`product-${product._id}`} />
                     </div>
-                    <ProductTitle index={index} />
+                    <ProductTitle product={product} />
                 </div>
                 <div>
-                    <ProductCart items={index % 2 === 0 ? index : undefined} />
+                    <ProductCart product={product} />
                 </div>
             </Card>
         </div>
     </>)
 }
 const CartDrawer = () => {
-    const { open, hide, onSwitch } = useCart()
+    const { open, hide, onSwitch, product, setQuantity } = useCart()
+    const total = React.useMemo(() => (product?.price || 0) * (product?.quantity || 0), [product?.price, product?.quantity])
     return (<>
         <Drawer open={open} onClose={() => hide()}>
             <DrawerContent>
-                <div className="mx-auto w-full max-w-sm">
+                <div className="mx-auto w-full max-w-sm min-h-[calc(100vh-4rem)]">
                     <DrawerHeader>
-                        <DrawerTitle>Move Goal</DrawerTitle>
-                        <DrawerDescription>Set your daily activity goal.</DrawerDescription>
+                        <DrawerTitle>{product?.name}</DrawerTitle>
+                        <DrawerDescription>{product?.description}</DrawerDescription>
                     </DrawerHeader>
-                    <div className="p-4 pb-0">
+                    <div className="p-4 pb-0 w-full flex items-center justify-center">
+                        <Button onClick={() => setQuantity(product._id, "-")}
+                        >
+                            -
+                        </Button>
+                        <span className="mx-2">{product?.quantity}</span>
+                        <Button onClick={() => setQuantity(product._id, "+")}
+                        >
+                            +
+                        </Button>
                     </div>
                     <DrawerFooter>
-                        <Button>Submit</Button>
-                        <DrawerClose asChild>
-                            <Button variant="outline">Cancel</Button>
-                        </DrawerClose>
+                        <div className="flex items-center justify-center w-full p-4">
+                            <span>Total: <b>{total} lei</b></span>
+                        </div>
                     </DrawerFooter>
                 </div>
             </DrawerContent>
@@ -133,14 +144,14 @@ const CartDrawer = () => {
     </>)
 }
 const ProductDrawer = () => {
-    const { open, hide, onSwitch } = useProduct()
+    const { product, open, hide, onSwitch } = useProduct()
     return (<>
         <Drawer open={open} onClose={() => hide()}>
             <DrawerContent>
                 <div className="mx-auto w-full max-w-sm min-h-[calc(100vh-4rem)]">
                     <DrawerHeader>
-                        <DrawerTitle>Move Goal</DrawerTitle>
-                        <DrawerDescription>Set your daily activity goal.</DrawerDescription>
+                        <DrawerTitle>{product?.name}</DrawerTitle>
+                        <DrawerDescription>{product?.description}</DrawerDescription>
                     </DrawerHeader>
                     <div className="p-4 pb-0">
                     </div>
@@ -158,25 +169,33 @@ const ProductDrawer = () => {
     </>)
 }
 const ProductRow = () => {
-    const { select, isSelected } = useCategory()
+    const { selected, select, deselect, isSelected } = useCategory()
     return (<>
         <Carousel
             opts={{
                 align: "start",
                 loop: true,
             }}
-            plugins={[
-                Autoplay({
-                    delay: 8000,
-                }),
-            ]}
+            {...!selected ? {
+                plugins: [
+                    Autoplay({
+                        delay: 8000,
+                    }),
+                ]
+            } : {}}
             className="w-full max-w-sm p-2"
         >
             <CarouselContent>
                 {Array.from({ length: 5 }).map((_, index) => {
                     const selected = isSelected(index.toString())
                     return (
-                        <CarouselItem key={index} className="basis-1/3 relative" onClick={() => select(index.toString())}>
+                        <CarouselItem key={index} className="basis-1/3 relative" onClick={() => {
+                            if (selected) {
+                                deselect(index.toString())
+                            } else {
+                                select(index.toString())
+                            }
+                        }}>
                             {selected && (
                                 <div className="absolute top-[-3px] right-0">
                                     <Badge variant="default" className="rounded-full">
@@ -201,6 +220,10 @@ const ProductRow = () => {
 }
 const ProductList = () => {
     const { selected } = useCategory()
+    const { products, fetchProducts } = useProducts()
+    React.useEffect(() => {
+        fetchProducts()
+    }, [selected])
     return (<>
         <Carousel
             opts={{
@@ -218,9 +241,9 @@ const ProductList = () => {
             className="w-full h-[calc(100vh-20em)]"
         >
             <CarouselContent className="-mt-1 h-[calc(100vh-12em)]">
-                {Array.from({ length: 50 }).map((_, index) => (
+                {products.map((product, index) => (
                     <CarouselItem key={index} className="pt-1 basis-1">
-                        <Product index={index} />
+                        <Product product={product} />
                     </CarouselItem>
                 ))}
             </CarouselContent>

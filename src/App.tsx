@@ -6,6 +6,8 @@ import Login from './views/login';
 import { Bar, BarItem } from './components/nav';
 import { Layout } from './components/layout';
 import Magazin from './views/magazin';
+import CartIcon from './components/cartIcon';
+import { useCart } from './state/cart';
 
 setupIonicReact();
 const PRODUCTS = () => {
@@ -31,6 +33,8 @@ const USER = () => {
 const App: React.FC = () => {
   navMonitor();
   const { tab } = useNav();
+  const { products } = useCart();
+  const items = 0;
   return (
     <>
       <Layout>
@@ -41,8 +45,8 @@ const App: React.FC = () => {
         <BarItem path="magazin">
           <PRODUCTS />
         </BarItem>
-        <BarItem path="cos">
-          <CART />
+        <BarItem path="cos" badge={products.length > 0 && products.length || undefined}>
+          <CartIcon items={products.length} />
         </BarItem>
         <BarItem path="comenzi">
           <ORDERS />

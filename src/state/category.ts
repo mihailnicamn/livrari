@@ -4,6 +4,7 @@ interface CategoryState {
   selected?: string;
   isSelected: (id: string) => boolean;
   select: (id: string) => void;
+  deselect: (id: string) => void;
   display: () => void;
   hide: () => void;
   onSwitch: () => void;
@@ -13,6 +14,7 @@ export const useCategory = create<CategoryState>((set, get) => ({
   selected: undefined,
   isSelected: (id: string) => get().selected === id,
   select: (id: string) => set({ selected: id }),
+  deselect: () => set({ selected: undefined }),
   display: () => set({ open: true }),
   hide: () => set({ open: false }),
   onSwitch: () => {
