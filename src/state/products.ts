@@ -1,15 +1,18 @@
 import { create } from "zustand";
 import axios from "axios";
+import { API } from "@/env";
 interface ProductsState {
+  search: string;
   category?: string;
   products: any[];
   loading: boolean;
   error: string;
   setCategory: (category: string) => void;
-  fetchProducts: () => Promise<void>;
+  setSearch: (search: string) => void;
+  fetchProducts: (category?: string) => Promise<any[]>;
 }
-const API = "https://livrari-back.onrender.com";
 export const useProducts = create<ProductsState>((set, get) => ({
+  search: "",
   category: undefined,
   products: [],
   loading: false,
@@ -17,16 +20,22 @@ export const useProducts = create<ProductsState>((set, get) => ({
   setCategory: (category: string) => {
     set({ category });
   },
-  fetchProducts: async () => {
+  setSearch: (search: string) => {
+    set({ search });
+  },
+  fetchProducts: async (category: string = get().category!) => {
     set({ loading: true });
     try {
-      const url = get().category
-        ? `${API}/products/${get().category}`
-        : `${API}/products`;
-      const { data } = await axios.get(url);
+      const url = category ? `${API}/products/${category}` : `${API}/products`;
+      console.log(url);
+      const { data } = await axios.get(url, {
+        params: { search: get().search },
+      });
       set({ products: data, loading: false });
+      return data;
     } catch (error: any) {
       set({ error: error.message, loading: false });
+      return [];
     }
   },
 }));

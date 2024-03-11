@@ -2,6 +2,8 @@ import { Route } from "@/components/nav"
 import Autoplay from "embla-carousel-autoplay"
 import { Card, CardContent } from "@/components/ui/card"
 import { For } from 'million/react';
+import { useSpring, animated } from "react-spring";
+import { useGesture } from "react-use-gesture";
 import {
     Carousel,
     CarouselContent,
@@ -36,6 +38,8 @@ import { Badge } from "@/components/ui/badge";
 import React from "react";
 import { useCategory } from "@/state/category";
 import { useProducts } from "@/state/products";
+import { useCategories } from "@/state/categories";
+import CartIcon from "@/components/cartIcon";
 
 const CART_FILL = () => {
     return (<>
@@ -60,11 +64,16 @@ const CHECKMARK = () => {
 
 const Search = () => {
     const { selected } = useCategory()
-    const placeholder = React.useMemo(() => selected ? `Caută Produse în ${selected}` : `Caută Produse`, [selected])
+    const { categories } = useCategories()
+    const { search, setSearch, fetchProducts } = useProducts()
+    const category = React.useMemo(() => categories.find((c) => c._id === selected), [categories, selected])
+    const placeholder = React.useMemo(() => selected ? `Caută ${category.name}` : `Caută Produse`, [category])
     return (<>
         <div className="flex items-center justify-center flex-row p-2 gap-2">
-            <Input className="w-full h-10 p-2 border border-gray-300 rounded-md" placeholder={placeholder} />
-            <Button size="icon" variant="ghost" className="h-10 w-10">
+            <Input className="w-full h-10 p-2 border border-gray-300 rounded-md" placeholder={placeholder} value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => {
+                fetchProducts()
+            }}>
                 <SEARCH />
             </Button>
         </div>
@@ -87,11 +96,25 @@ const ProductCart = ({ product }: { product: any }) => {
 }
 const ProductTitle = ({ product }: { product: any }) => {
     return (<>
-        <div className="flex items-center justify-center flex-col ml-2 ">
-            <span className="text-lg font-semibold text-start w-full">{product?.name}</span>
-            <span className="text-sm text-start w-full">{product?.price} lei</span>
+        <div className="flex items-center justify-center flex-col ml-2">
+            <span className="text-lg font-start text-start w-full">{product?.name}</span>
+            <span className="text-sm text-semibold w-full">{product?.price} lei</span>
         </div>
     </>)
+}
+const SmallProductTitle = ({ product }: { product: any }) => {
+    return (<>
+        <div className="flex items-center justify-center flex-col ml-2  min-h-[200px]">
+            <span className="text-lg font-start text-start w-full">{product?.name}</span>
+            {/* <span className="text-sm text-semibold w-full">{product?.price} lei</span> */}
+        </div>
+    </>)
+}
+const shrink = (text: string, length: number) => {
+    if (text.length > length) {
+        return text.slice(0, length) + "..."
+    }
+    return text
 }
 const Product = ({ product }: { product: any }) => {
     const { display } = useProduct()
@@ -99,7 +122,7 @@ const Product = ({ product }: { product: any }) => {
         <div className="p-1" >
             <Card className="flex items-center justify-between p-2 w-full h-full">
                 <div className="flex items-center justify-center flex-row" onClick={() => display(product)}>
-                    <div className="flex h-20 w-20 rounded-md overflow-hidden">
+                    <div className="flex h-20 w-20 rounded-md overflow-hidden items-center justify-center">
                         <img src={product.image} alt={`product-${product._id}`} />
                     </div>
                     <ProductTitle product={product} />
@@ -112,7 +135,7 @@ const Product = ({ product }: { product: any }) => {
     </>)
 }
 const CartDrawer = () => {
-    const { open, hide, onSwitch, product, setQuantity } = useCart()
+    const { open, hide, onSwitch, product, setQuantity, getQuantity } = useCart()
     const total = React.useMemo(() => (product?.price || 0) * (product?.quantity || 0), [product?.price, product?.quantity])
     return (<>
         <Drawer open={open} onClose={() => hide()}>
@@ -122,7 +145,7 @@ const CartDrawer = () => {
                         <DrawerTitle>{product?.name}</DrawerTitle>
                         <DrawerDescription>{product?.description}</DrawerDescription>
                     </DrawerHeader>
-                    <div className="p-4 pb-0 w-full flex items-center justify-center">
+                    <div className="p-4 pb-0 w-full flex items-center justify-center mb-4">
                         <Button onClick={() => setQuantity(product._id, "-")}
                         >
                             -
@@ -133,9 +156,20 @@ const CartDrawer = () => {
                             +
                         </Button>
                     </div>
+                    <Card className="mx-4">
+                        <CardContent className="flex justify-center items-center relative" >
+                            <div className="flex rounded-md overflow-hidden items-center justify-center h-full relative">
+                                <img src={product?.image} alt={`product-${product?._id}`} />
+                            </div>
+                            <div className="absolute bottom-4 right-4">
+                                <Badge >Preț: <b>{product?.price} lei</b></Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
                     <DrawerFooter>
                         <div className="flex items-center justify-center w-full p-4">
-                            <span>Total: <b>{total} lei</b></span>
+                            <Button onClick={() => hide()} variant="default" className="w-full">
+                                Continuă cumpărăturile</Button>
                         </div>
                     </DrawerFooter>
                 </div>
@@ -143,33 +177,160 @@ const CartDrawer = () => {
         </Drawer>
     </>)
 }
+const SmallProduct = ({ product, onSwitch }: { product: any, onSwitch: (product: any) => void }) => {
+    return (<>
+        <div className="p-1 min-h-[200px]" onClick={() => {
+            onSwitch(product)
+        }}>
+            <Card className="flex items-center justify-between p-2 w-full h-full relative">
+                <div className="flex items-center justify-center flex-col min-h-[200px]">
+                    <div className="flex h-20 w-20 rounded-md overflow-hidden items-center justify-center">
+                        <img src={product?.image} alt={`product-${product?._id}`} />
+                    </div>
+                    <SmallProductTitle product={product} />
+                    <div className="absolute bottom-4 right-4">
+                        <Badge >{product?.price} lei</Badge>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    </>)
+}
+const SimilarProducts = ({ category, onSwitch }: { category: string, onSwitch: (product: any) => void }) => {
+    const [products, setProducts] = React.useState<any[]>([])
+    const { fetchProducts } = useProducts()
+    React.useEffect(() => {
+        fetchProducts(category).then((data) => {
+            setProducts(data)
+        })
+    }, [])
+    return (<>
+        <Carousel
+            opts={{
+                align: "start",
+                loop: true,
+            }}
+            plugins={[
+                Autoplay({
+                    delay: 8000,
+                }),
+            ]}
+            orientation="horizontal"
+            className="w-full min-h-[200px]"
+        >
+            <CarouselContent className="-mt-1 min-h-[200px] w-full">
+                {products.map((product, index) => (
+                    <CarouselItem key={index} className="pt-1 basis-1/2 w-full min-h-[200px]">
+                        <SmallProduct product={product} onSwitch={onSwitch} />
+                    </CarouselItem>
+                ))}
+            </CarouselContent>
+        </Carousel >
+    </>)
+
+}
+function VerticalScrollView(props: { children: React.ReactNode, className: string }) {
+    const ref = React.useRef() as any;
+    const isDragging = React.useRef(false);
+    const [{ y }, set, stop] = useSpring(() => ({ y: 0 })) as any;
+    const bind = useGesture(
+        {
+            onDrag({ down, movement: [, y], first, last }) {
+                if (first) isDragging.current = true;
+                if (last) setTimeout(() => (isDragging.current = false), 0);
+                set({ y: -y, immediate: down });
+            },
+            onClickCapture(ev: any) {
+                if (isDragging.current) {
+                    ev.stopPropagation();
+                }
+            },
+            onWheelStart() {
+                // Stop any user-land scroll animation from confcliting with the browser
+                stop();
+            }
+        },
+        {
+            drag: {
+                axis: "y",
+                filterTaps: true,
+                initial() {
+                    return [0, -ref.current.scrollTop];
+                }
+            }
+        }
+    );
+
+    return (
+        <animated.div
+            ref={ref}
+            scrollTop={y}
+            className={props.className}
+            {...bind()}
+        >
+            {props.children}
+        </animated.div>
+    );
+}
+
 const ProductDrawer = () => {
+    const { display, setQuantity, getQuantity, setProduct } = useCart()
     const { product, open, hide, onSwitch } = useProduct()
     return (<>
         <Drawer open={open} onClose={() => hide()}>
-            <DrawerContent>
-                <div className="mx-auto w-full max-w-sm min-h-[calc(100vh-4rem)]">
+            <DrawerContent className=" overflow-scroll">
+                <VerticalScrollView className="mb-2 overflow-scroll mx-auto w-full max-w-sm min-h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)]">
                     <DrawerHeader>
                         <DrawerTitle>{product?.name}</DrawerTitle>
                         <DrawerDescription>{product?.description}</DrawerDescription>
                     </DrawerHeader>
-                    <div className="p-4 pb-0">
+                    <div className="p-4 pb-0 h-[calc(100%-150px)]">
+                        <Card>
+                            <CardContent>
+                                <div className="flex rounded-md overflow-hidden items-center justify-center h-full relative">
+                                    <img src={product?.image} alt={`product-${product?._id}`} />
+                                    <div className="absolute bottom-4 right-4">
+                                        <Badge
+                                            onClick={() => new Promise((resolve) => {
+                                                const quantity = getQuantity(product?._id)
+                                                if (quantity > 0) {
+                                                    hide();
+                                                    setTimeout(() => {
+                                                        display(product);
+                                                        resolve(true)
+                                                    }, 200);
+                                                } else {
+                                                    hide();
+                                                    setTimeout(() => {
+                                                        setProduct(product)
+                                                        setQuantity(product?._id, "+")
+                                                        display(product);
+                                                        resolve(true)
+                                                    }, 200);
+                                                }
+                                            })}>
+                                            <CartIcon items={getQuantity(product?._id)} />
+                                            {product?.price} lei
+                                        </Badge>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
-                    <DrawerFooter>
-                        <Button
-                            onClick={onSwitch}
-                        >Submit</Button>
-                        <Button
-                            onClick={hide}
-                            variant="outline">Cancel</Button>
+                    <DrawerFooter className="flex flex-row items-center justify-center">
+                        <SimilarProducts category={product?.category} onSwitch={onSwitch} />
                     </DrawerFooter>
-                </div>
+                </VerticalScrollView>
             </DrawerContent>
         </Drawer >
     </>)
 }
 const ProductRow = () => {
     const { selected, select, deselect, isSelected } = useCategory()
+    const { categories, fetchCategories } = useCategories();
+    React.useEffect(() => {
+        fetchCategories()
+    }, [])
     return (<>
         <Carousel
             opts={{
@@ -186,14 +347,14 @@ const ProductRow = () => {
             className="w-full max-w-sm p-2"
         >
             <CarouselContent>
-                {Array.from({ length: 5 }).map((_, index) => {
-                    const selected = isSelected(index.toString())
+                {categories.map((category) => {
+                    const selected = isSelected(category._id.toString())
                     return (
-                        <CarouselItem key={index} className="basis-1/3 relative" onClick={() => {
+                        <CarouselItem key={category._id} className="basis-1/3 relative" onClick={() => {
                             if (selected) {
-                                deselect(index.toString())
+                                deselect(category._id.toString())
                             } else {
-                                select(index.toString())
+                                select(category._id.toString())
                             }
                         }}>
                             {selected && (
@@ -204,11 +365,13 @@ const ProductRow = () => {
                                 </div>)}
                             <Card className="overflow-hidden" >
                                 {/* <span className="text-3xl font-semibold">{index + 1}</span> */}
-                                <img src={`https://picsum.photos/150/150?random=${index}`} alt="product" />
+                                <div className="flex h-20 w-20 rounded-md overflow-hidden items-center justify-center">
+                                    <img src={category.image} alt={`product-${category._id}`} />
+                                </div>
                             </Card>
                             <div className="absolute bottom-0 left-4">
                                 <Badge variant="default" className="rounded-full">
-                                    Category {index}
+                                    {shrink(category.name, 10)}
                                 </Badge>
                             </div>
                         </CarouselItem>
@@ -220,8 +383,9 @@ const ProductRow = () => {
 }
 const ProductList = () => {
     const { selected } = useCategory()
-    const { products, fetchProducts } = useProducts()
+    const { products, fetchProducts, setCategory } = useProducts()
     React.useEffect(() => {
+        setCategory(selected!)
         fetchProducts()
     }, [selected])
     return (<>
@@ -255,8 +419,8 @@ const Magazin = () => {
         <ProductRow />
         <Search />
         <ProductList />
-        <ProductDrawer />
         <CartDrawer />
+        <ProductDrawer />
     </>)
 }
 

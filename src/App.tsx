@@ -6,6 +6,7 @@ import Login from './views/login';
 import { Bar, BarItem } from './components/nav';
 import { Layout } from './components/layout';
 import Magazin from './views/magazin';
+import Cart from './views/cart';
 import CartIcon from './components/cartIcon';
 import { useCart } from './state/cart';
 
@@ -38,6 +39,7 @@ const App: React.FC = () => {
   return (
     <>
       <Layout>
+        <Cart />
         <Magazin />
         <Login />
       </Layout>

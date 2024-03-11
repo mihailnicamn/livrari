@@ -10,6 +10,7 @@ interface CartState {
   display: (product?: any) => void;
   hide: () => void;
   onSwitch: () => void;
+  setProduct: (product: any) => void;
 }
 
 const cartState = (): StateCreator<CartState> => (set, get) => ({
@@ -23,14 +24,14 @@ const cartState = (): StateCreator<CartState> => (set, get) => ({
   },
   setQuantity: (id: string, quantity: number | string) => {
     let { product, products } = get();
+    const cmds = {
+      "+": 1,
+      "-": -1,
+    } as any;
     if (product) {
       let _quantity = product.quantity;
-      if (quantity == "+") {
-        _quantity = _quantity + 1;
-      } else if (quantity == "-") {
-        _quantity = _quantity - 1;
-      } else {
-        _quantity = quantity;
+      if (cmds[quantity]) {
+        _quantity = _quantity + cmds[quantity];
       }
       if (_quantity < 0) _quantity = 0;
       product.quantity = _quantity;
@@ -43,19 +44,23 @@ const cartState = (): StateCreator<CartState> => (set, get) => ({
     }
     set({ product, products });
   },
-  display: (product) =>
+  display: (product) => {
     set({
       open: true,
       product: product
         ? { ...product, quantity: get().getQuantity(product._id) }
         : undefined,
-    }),
+    });
+  },
   hide: () => set({ open: false }),
   onSwitch: () => {
     set({ open: false });
     setTimeout(() => {
       set({ open: true });
     }, 500);
+  },
+  setProduct: (product) => {
+    set({ product });
   },
 });
 

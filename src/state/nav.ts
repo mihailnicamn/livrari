@@ -1,6 +1,9 @@
 import React from "react";
 import { create } from "zustand";
 const sanitize = (hash: string) => hash.replace(/[^a-z0-9-]/gi, "");
+if (window.location.hash.length === 0) {
+  window.location.hash = "magazin";
+}
 interface NavState {
   tab: string;
   setTab: (tab: string) => void;
