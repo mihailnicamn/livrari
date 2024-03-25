@@ -1,6 +1,7 @@
-import { create } from "zustand";
+import { StateCreator, create } from "zustand";
 import axios from "axios";
 import { API } from "@/env";
+import { persist } from "zustand/middleware";
 interface ProductsState {
   search: string;
   category?: string;
@@ -11,7 +12,7 @@ interface ProductsState {
   setSearch: (search: string) => void;
   fetchProducts: (category?: string) => Promise<any[]>;
 }
-export const useProducts = create<ProductsState>((set, get) => ({
+const productsState = (): StateCreator<ProductsState> => (set, get) => ({
   search: "",
   category: undefined,
   products: [],
@@ -38,4 +39,8 @@ export const useProducts = create<ProductsState>((set, get) => ({
       return [];
     }
   },
-}));
+});
+
+export const useProducts = create<ProductsState>(
+  persist(productsState(), { name: "products" }) as any
+);

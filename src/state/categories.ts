@@ -1,6 +1,7 @@
-import { create } from "zustand";
+import { StateCreator, create } from "zustand";
 import axios from "axios";
 import { API } from "@/env";
+import { persist } from "zustand/middleware";
 interface CategoriesState {
   category?: string;
   categories: any[];
@@ -9,7 +10,7 @@ interface CategoriesState {
   setCategory: (category: string) => void;
   fetchCategories: () => Promise<void>;
 }
-export const useCategories = create<CategoriesState>((set, get) => ({
+const categoriesState = (): StateCreator<CategoriesState> => (set, get) => ({
   category: undefined,
   categories: [],
   loading: false,
@@ -28,4 +29,8 @@ export const useCategories = create<CategoriesState>((set, get) => ({
       set({ error: error.message, loading: false });
     }
   },
-}));
+});
+
+export const useCategories = create<CategoriesState>(
+  persist(categoriesState(), { name: "categories" }) as any
+);

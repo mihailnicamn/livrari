@@ -1,40 +1,57 @@
+import { API } from "@/env";
+import axios from "axios";
 import { create, StateCreator } from "zustand";
 import { persist } from "zustand/middleware";
-interface CartState {
+interface OrderState {
   open: boolean;
   products: any;
   productsMap: any;
   product?: any;
-  getTotal: () => number;
-  resetCart: () => void;
-  inCart: (id: string) => boolean;
+  sendOrder: (
+    products: any,
+    user: any,
+    method: any,
+    date: any,
+    time: any
+  ) => Promise<void>;
+  inOrder: (id: string) => boolean;
   getQuantity: (id: string) => number;
   setQuantity: (id: string, quantity: number | string) => void;
   display: (product?: any) => void;
   hide: () => void;
   onSwitch: () => void;
   setProduct: (product: any) => void;
+  setProducts: (products: any) => void;
 }
 
-const cartState = (): StateCreator<CartState> => (set, get) => ({
+const orderState = (): StateCreator<OrderState> => (set, get) => ({
   open: false,
   productsMap: {},
   products: [],
   product: undefined,
-  getTotal: () => {
-    return parseFloat(
-      get()
-        .products.reduce(
-          (acc: number, { price, quantity }: any) => acc + price * quantity,
-          0
-        )
-        .toFixed(2)
+  sendOrder: async (
+    products: any,
+    user: any,
+    method: any,
+    date: any,
+    time: any
+  ) => {
+    const total = products.reduce(
+      (acc: number, { price, quantity }: any) => acc + price * quantity,
+      0
     );
+    try {
+      const { data } = await axios.post(`${API}/users/order`, {
+        products,
+        method,
+        date,
+        time,
+        user,
+        total,
+      });
+    } catch (error: any) {}
   },
-  resetCart: () => {
-    set({ productsMap: {}, products: [] });
-  },
-  inCart: (id: string) => get().productsMap?.[id],
+  inOrder: (id: string) => get().productsMap?.[id],
   getQuantity: (id: string) => {
     return get().productsMap[id]?.quantity || 0;
   },
@@ -66,18 +83,12 @@ const cartState = (): StateCreator<CartState> => (set, get) => ({
     set({ product, productsMap, products: Object.values(productsMap) });
   },
   display: (product) => {
-    const { getQuantity, setQuantity } = get();
-    const q = getQuantity(product._id);
     set({
       open: true,
       product: product
-        ? { ...product, quantity: getQuantity(product._id) || 1 }
+        ? { ...product, quantity: get().getQuantity(product._id) }
         : undefined,
     });
-
-    if (!q) {
-      setQuantity(product._id, 1);
-    }
   },
   hide: () => set({ open: false }),
   onSwitch: () => {
@@ -89,8 +100,13 @@ const cartState = (): StateCreator<CartState> => (set, get) => ({
   setProduct: (product) => {
     set({ product });
   },
+  setProducts: (products) => {
+    let productsMap = {} as any;
+    products.forEach((product: any) => {
+      productsMap[product._id] = product;
+    });
+    set({ productsMap, products });
+  },
 });
 
-export const useCart = create<CartState>(
-  persist(cartState(), { name: "cart" }) as any
-);
+export const useOrder = create<OrderState>(orderState());
